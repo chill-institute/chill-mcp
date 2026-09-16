@@ -1,0 +1,78 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: main-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_NAME: ghcr.io/chill-institute/chill-mcp
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/.cache/golangci-lint
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('mise.toml', 'go.sum', '.golangci.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - run: mise run verify
+      - run: mise run smoke
+      - name: Build the release candidate
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg "VERSION=main-${SHA::12}" \
+            --build-arg "COMMIT=$SHA" \
+            --label "org.opencontainers.image.revision=$SHA" \
+            -t chill-mcp:release-candidate .
+      - name: Prove the exact payload boots
+        run: |
+          docker run -d --name candidate --read-only --cap-drop ALL --security-opt no-new-privileges:true \
+            -e CHILL_ENGINE_BASE_URL=http://127.0.0.1:9 -p 127.0.0.1:7100:7100 chill-mcp:release-candidate
+          for _ in $(seq 1 50); do docker exec candidate /chill-mcp health 2>/dev/null && break; sleep 0.2; done
+          docker exec candidate /chill-mcp health
+          code="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:7100/mcp -H 'Content-Type: application/json' -d '{}')"
+          [ "$code" = "401" ] || { echo "expected 401 without bearer, got $code"; exit 1; }
+          docker rm -f candidate
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Publish the verified image
+        env:
+          SHA: ${{ github.sha }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          tag="$IMAGE_NAME:$SHA-$RUN_ID-$RUN_ATTEMPT"
+          docker tag chill-mcp:release-candidate "$tag"
+          docker tag chill-mcp:release-candidate "$IMAGE_NAME:main"
+          docker push "$tag"
+          docker push "$IMAGE_NAME:main"
+          {
+            echo '## Published image'
+            echo
+            echo '```'
+            docker image inspect "$tag" --format '{{join .RepoDigests "\n"}}'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

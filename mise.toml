@@ -1,0 +1,114 @@
+[tools]
+actionlint = "1.7.12"
+go = "1.27.1"
+zizmor = "1.30.0"
+
+[env]
+GOWORK = "off"
+
+[settings]
+experimental = true
+
+[hooks]
+postinstall = "mise run hooks"
+
+[tasks.fmt]
+description = "Format Go sources"
+run = """
+go_files="$(git ls-files '*.go')"
+[ -n "$go_files" ] || exit 0
+printf '%s\n' "$go_files" | while IFS= read -r file; do
+  [ -f "$file" ] || continue
+  go tool goimports -w "$file"
+  gofmt -w "$file"
+done
+"""
+
+[tasks."fmt:check"]
+description = "Check Go source formatting"
+run = """
+files="$(gofmt -l $(git ls-files '*.go'))"
+if [ -n "$files" ]; then printf 'gofmt needs to be run on:\\n%s\\n' "$files" >&2; exit 1; fi
+files="$(go tool goimports -l $(git ls-files '*.go'))"
+if [ -n "$files" ]; then printf 'goimports needs to be run on:\\n%s\\n' "$files" >&2; exit 1; fi
+"""
+
+[tasks.lint]
+description = "Run static analysis"
+run = "go tool golangci-lint run ./..."
+
+[tasks."mod:check"]
+description = "Ensure go.mod and go.sum are tidy without mutating them"
+run = "go mod tidy -diff"
+
+[tasks.test]
+description = "Run unit and protocol tests"
+run = "go test -count=1 ./..."
+
+[tasks.coverage]
+description = "Run tests with coverage threshold"
+run = """
+threshold="${MISE_COVERAGE_THRESHOLD:-80}"
+go test -count=1 -coverprofile=coverage.out ./internal/... ./cmd/...
+total="$(go tool cover -func=coverage.out | awk '/^total:/ {sub("%", "", $3); print $3}')"
+printf '==> total coverage: %s%% (threshold %s%%)\\n' "$total" "$threshold"
+awk -v total="$total" -v threshold="$threshold" 'BEGIN { exit (total + 0 < threshold + 0) ? 1 : 0 }'
+"""
+
+[tasks.security]
+description = "Run dependency vulnerability scan"
+run = "go tool govulncheck ./..."
+
+[tasks.actions]
+description = "Validate and audit GitHub Actions"
+run = """
+actionlint
+zizmor --min-severity medium .github/workflows
+"""
+
+[tasks.smoke]
+description = "Boot the http server on a loopback port and prove health plus the bearer gate"
+run = """
+set -eu
+export CHILL_LISTEN_HOST=127.0.0.1 CHILL_LISTEN_PORT="${CHILL_LISTEN_PORT:-7199}" CHILL_ENGINE_BASE_URL=http://127.0.0.1:9
+go build -o ./chill-mcp ./cmd/chill-mcp
+./chill-mcp http & pid=$!
+trap 'kill "$pid" 2>/dev/null || true' EXIT
+for _ in $(seq 1 50); do ./chill-mcp health 2>/dev/null && break; sleep 0.1; done
+./chill-mcp health
+code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$CHILL_LISTEN_PORT/mcp" -H 'Content-Type: application/json' -d '{}')"
+[ "$code" = "401" ] || { echo "expected 401 without bearer, got $code" >&2; exit 1; }
+printf 'smoke ok\\n'
+"""
+
+[tasks."docker:build"]
+description = "Build the release image locally"
+run = "docker build -t chill-mcp:local ."
+
+[tasks.hooks]
+description = "Install repo git hooks"
+run = """
+hooks_dir="$(git rev-parse --git-path hooks)"
+mkdir -p "$hooks_dir"
+printf '#!/bin/sh\\nexec mise run hooks:pre-commit\\n' > "$hooks_dir/pre-commit"
+printf '#!/bin/sh\\nexec mise run hooks:pre-push\\n' > "$hooks_dir/pre-push"
+chmod +x "$hooks_dir/pre-commit" "$hooks_dir/pre-push"
+"""
+
+[tasks."hooks:pre-commit"]
+description = "Format staged Go files and restage them"
+run = """
+staged="$(git diff --cached --name-only --diff-filter=ACMR -- '*.go')"
+[ -n "$staged" ] || exit 0
+printf '%s\n' "$staged" | while IFS= read -r file; do
+  go tool goimports -w "$file"; gofmt -w "$file"; git add -- "$file"
+done
+"""
+
+[tasks."hooks:pre-push"]
+description = "Run the verification gate before push"
+run = "mise run verify"
+
+[tasks.verify]
+description = "Run formatting, module, lint, coverage, security, and workflow checks"
+depends = ["fmt:check", "mod:check", "lint", "coverage", "security", "actions"]
