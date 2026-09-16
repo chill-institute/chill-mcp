@@ -33,6 +33,7 @@ mise run smoke
 - Entry point, transports, and process lifecycle: `cmd/chill-mcp/`
 - Tool definitions, validation, and API mapping: `internal/server/`
 - Image: `Dockerfile`; publish flow: `.github/workflows/main.yml`
-- Production compose, ingress, and deploy live in `chill-engine`.
+- Production hosting pins the published image digest and is owned outside
+  this repository.
 
 Commit verified changes with Conventional Commits and push directly to `main`.
