@@ -65,4 +65,5 @@ text.
 Pull requests run `mise run verify`, `mise run smoke`, and an image build.
 Pushes to `main` verify, build, boot the exact image read-only with all
 capabilities dropped, prove health and the `401` gate, then publish to
-`ghcr.io/chill-institute/chill-mcp`. Production pins the published digest.
+`ghcr.io/chill-institute/chill-mcp` and dispatch the production deploy with
+the published digest, waiting for its result.

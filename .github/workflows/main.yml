@@ -59,6 +59,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - name: Publish the verified image
+        id: publish
         env:
           SHA: ${{ github.sha }}
           RUN_ID: ${{ github.run_id }}
@@ -69,10 +70,41 @@ jobs:
           docker tag chill-mcp:release-candidate "$IMAGE_NAME:main"
           docker push "$tag"
           docker push "$IMAGE_NAME:main"
+          digest_ref="$(docker image inspect "$tag" --format '{{join .RepoDigests "\n"}}' | grep -E "^$IMAGE_NAME@sha256:[0-9a-f]{64}$" | head -n1)"
+          [ -n "$digest_ref" ] || { echo "no digest reference for $tag"; exit 1; }
+          echo "ref=$digest_ref" >> "$GITHUB_OUTPUT"
           {
             echo '## Published image'
             echo
             echo '```'
-            docker image inspect "$tag" --format '{{join .RepoDigests "\n"}}'
+            echo "$digest_ref"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Mint a chill-releaser token for chill-engine
+        id: releaser
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.RELEASER_APP_ID }}
+          private-key: ${{ secrets.RELEASER_APP_PRIVATE_KEY }}
+          owner: chill-institute
+          repositories: chill-engine
+          permission-actions: write
+
+      - name: Deploy through chill-engine
+        env:
+          GH_TOKEN: ${{ steps.releaser.outputs.token }}
+          IMAGE_REF: ${{ steps.publish.outputs.ref }}
+        run: |
+          set -euo pipefail
+          before="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run deploy-mcp.yml -R chill-institute/chill-engine --ref main -f image="$IMAGE_REF"
+          run_id=""
+          for _ in $(seq 1 12); do
+            sleep 10
+            run_id="$(gh run list -R chill-institute/chill-engine -w deploy-mcp.yml --created ">=$before" -L 1 --json databaseId -q '.[0].databaseId // empty')"
+            [ -n "$run_id" ] && break
+          done
+          [ -n "$run_id" ] || { echo "::error::could not find the dispatched deploy run"; exit 1; }
+          echo "Deploy run: https://github.com/chill-institute/chill-engine/actions/runs/$run_id" >> "$GITHUB_STEP_SUMMARY"
+          gh run watch "$run_id" -R chill-institute/chill-engine --exit-status
