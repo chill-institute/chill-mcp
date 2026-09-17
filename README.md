@@ -47,7 +47,7 @@ go install github.com/chill-institute/chill-mcp/cmd/chill-mcp@latest
 
 ## Sign In
 
-Open <https://chill.institute/auth/cli-token> in a signed-in browser and copy
+Open <https://chill.institute/auth/setup-token> in a signed-in browser and copy
 the token. Use it as the bearer above, or run `chilly auth login` for stdio.
 Treat the token as a password: it lives in your client config, and you revoke
 it from the same page.
