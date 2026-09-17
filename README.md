@@ -102,10 +102,11 @@ probes it from inside the image. Requests to `/mcp` without a well-formed
 bearer get `401` with `WWW-Authenticate: Bearer`; the API decides whether a
 token is valid. The process logs no headers, tokens, or response bodies.
 
-Every push to `main` publishes `ghcr.io/chill-institute/chill-mcp` with an
-immutable `<sha>-<run>-<attempt>` tag and a moving `main` tag, then deploys
-the digest to `mcp.chill.institute` through the hosting repository's deploy
-workflow and waits for it to finish.
+Every push to `main` cuts a semantic-release version and GitHub release, then
+publishes `ghcr.io/chill-institute/chill-mcp` as `:X.Y.Z`, `:X.Y`, `:X`,
+`:latest`, `:main`, and `:sha-<commit>`. The release notes carry the image
+digest, and that digest is deployed to `mcp.chill.institute` through the
+hosting repository's deploy workflow before the run finishes.
 
 [Architecture](./docs/ARCHITECTURE.md) · [Contributing](./CONTRIBUTING.md) ·
 [Security](./SECURITY.md) · [MIT License](./LICENSE)

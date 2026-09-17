@@ -63,7 +63,8 @@ text.
 ## Delivery
 
 Pull requests run `mise run verify`, `mise run smoke`, and an image build.
-Pushes to `main` verify, build, boot the exact image read-only with all
-capabilities dropped, prove health and the `401` gate, then publish to
-`ghcr.io/chill-institute/chill-mcp` and dispatch the production deploy with
-the published digest, waiting for its result.
+Pushes to `main` verify, let semantic-release tag a version and GitHub
+release as `chill-ci`, build the image with that version, boot it read-only
+with all capabilities dropped, prove health, the version, and the `401` gate,
+publish versioned tags to `ghcr.io/chill-institute/chill-mcp`, record the
+digest on the release, and dispatch the production deploy with it.
