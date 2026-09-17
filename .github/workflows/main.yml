@@ -102,7 +102,8 @@ jobs:
           run_id=""
           for _ in $(seq 1 12); do
             sleep 10
-            run_id="$(gh run list -R chill-institute/chill-engine -w deploy-mcp.yml --created ">=$before" -L 1 --json databaseId -q '.[0].databaseId // empty')"
+            # shellcheck disable=SC2016 # $before is a jq variable
+            run_id="$(gh run list -R chill-institute/chill-engine -w deploy-mcp.yml -L 5 --json databaseId,createdAt -q --arg before "$before" '[.[] | select(.createdAt >= $before)] | first | .databaseId // empty')"
             [ -n "$run_id" ] && break
           done
           [ -n "$run_id" ] || { echo "::error::could not find the dispatched deploy run"; exit 1; }
