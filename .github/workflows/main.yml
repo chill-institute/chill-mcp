@@ -81,12 +81,12 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Mint a chill-releaser token for chill-engine
+      - name: Mint a chill-ci token for chill-engine
         id: releaser
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.RELEASER_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASER_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.CHILL_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CHILL_CI_APP_PRIVATE_KEY }}
           owner: chill-institute
           repositories: chill-engine
           permission-actions: write
