@@ -49,8 +49,8 @@ go install github.com/chill-institute/chill-mcp/cmd/chill-mcp@latest
 
 Open <https://chill.institute/auth/setup-token> in a signed-in browser and copy
 the token. Use it as the bearer above, or run `chilly auth login` for stdio.
-Treat the token as a password: it lives in your client config, and you revoke
-it from the same page.
+Treat the token as a password: it lives in your client config and stays valid
+until you sign out of chill.institute or replace it.
 
 Clients that only accept OAuth remote servers, such as Claude.ai and ChatGPT
 connectors, cannot use the hosted endpoint. Use stdio there.

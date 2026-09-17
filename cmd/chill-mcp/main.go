@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -48,6 +49,11 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 	logger := slog.New(slog.NewTextHandler(stderr, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	go func() {
+		// After the first signal starts a graceful stop, a second one must not be swallowed.
+		<-ctx.Done()
+		stop()
+	}()
 
 	var err error
 	switch args[0] {
@@ -64,12 +70,17 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "unknown command %q\n", args[0])
 		return 2
 	}
+	if errors.Is(err, errUsage) {
+		return 2
+	}
 	if err != nil {
 		logger.Error("chill-mcp failed", "error", err.Error())
 		return 1
 	}
 	return 0
 }
+
+var errUsage = errors.New("usage")
 
 func apiClient(baseURL string) *rpc.Client {
 	return rpc.NewClient(baseURL, nil, rpc.WithClientName(server.ClientName), rpc.WithClientVersion(buildinfo.Current().Version))
@@ -82,6 +93,11 @@ func runStdio(ctx context.Context, args []string, logger *slog.Logger) error {
 	apiURL := flags.String("api-url", "", "override API base URL")
 	configPath := flags.String("config", "", "chilly config file path")
 	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			flags.SetOutput(os.Stderr)
+			flags.Usage()
+			return errUsage
+		}
 		return fmt.Errorf("stdio flags: %w", err)
 	}
 
@@ -107,7 +123,7 @@ func runStdio(ctx context.Context, args []string, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	logger.Info("serving chill.institute MCP over stdio", "api", cfg.APIBaseURL)
+	logger.Info("serving chill.institute MCP over stdio", "api", redactedURL(cfg.APIBaseURL))
 	return srv.MCP().Run(ctx, &mcp.StdioTransport{})
 }
 
@@ -198,6 +214,14 @@ func runHealth(ctx context.Context) error {
 		return fmt.Errorf("health returned status %d", response.StatusCode)
 	}
 	return nil
+}
+
+func redactedURL(raw string) string {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return "invalid"
+	}
+	return parsed.Redacted()
 }
 
 func discardLogger() *slog.Logger {

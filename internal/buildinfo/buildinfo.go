@@ -1,7 +1,10 @@
 // Package buildinfo exposes version metadata injected at link time.
 package buildinfo
 
-import "strings"
+import (
+	"runtime/debug"
+	"strings"
+)
 
 var (
 	version = "dev"
@@ -14,9 +17,23 @@ type Info struct {
 	Commit  string `json:"commit"`
 }
 
-// Current returns the linked build identity with dev fallbacks.
+// Current returns the linked build identity. Without ldflags it uses the
+// module version recorded by go install, so a released binary never reports
+// "dev" and never selects the dev chilly profile.
 func Current() Info {
-	return Info{Version: fallback(version, "dev"), Commit: fallback(commit, "unknown")}
+	v := fallback(version, "")
+	if v == "" {
+		v = moduleVersion()
+	}
+	return Info{Version: fallback(v, "dev"), Commit: fallback(commit, "unknown")}
+}
+
+func moduleVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info.Main.Version == "" || info.Main.Version == "(devel)" {
+		return ""
+	}
+	return strings.TrimPrefix(info.Main.Version, "v")
 }
 
 func fallback(value string, def string) string {

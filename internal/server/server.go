@@ -117,10 +117,14 @@ func toolError(err error) error {
 		if message == "" {
 			message = fmt.Sprintf("hosted API returned status %d", apiErr.StatusCode)
 		}
-		if apiErr.StatusCode == 401 || apiErr.StatusCode == 403 || code == "invalid_auth_token" {
-			return fmt.Errorf("auth_error: %s (request %s); the chill.institute token is missing, expired, or revoked", message, apiErr.RequestID)
+		suffix := ""
+		if apiErr.RequestID != "" {
+			suffix = " (request " + apiErr.RequestID + ")"
 		}
-		return fmt.Errorf("%s: %s (request %s)", code, message, apiErr.RequestID)
+		if apiErr.StatusCode == 401 || code == "invalid_auth_token" {
+			return fmt.Errorf("auth_error: %s%s; the chill.institute token is missing, expired, or revoked", message, suffix)
+		}
+		return fmt.Errorf("%s: %s%s", code, message, suffix)
 	}
 	var validation *chill.ValidationError
 	if errors.As(err, &validation) {

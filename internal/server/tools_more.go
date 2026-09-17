@@ -103,7 +103,7 @@ func (server *Server) registerMoreTools() {
 	}, server.listUserSettingFields)
 	mcp.AddTool(server.mcp, &mcp.Tool{
 		Name:        "update_user_setting",
-		Description: "Change one hosted user setting by field and value. Reads current settings, applies the patch, and saves. Use dry_run=true to preview.",
+		Description: "Change one hosted user setting by field and value. Reads current settings, applies the patch, and saves the whole object, so the last writer wins against concurrent edits. Use dry_run=true to preview.",
 		Annotations: &mcp.ToolAnnotations{Title: "Update user setting", ReadOnlyHint: false, IdempotentHint: true, DestructiveHint: &boolTrue, OpenWorldHint: &boolFalse},
 	}, server.updateUserSetting)
 }
@@ -194,11 +194,14 @@ func (server *Server) updateUserSetting(ctx context.Context, req *mcp.CallToolRe
 		return nil, nil, toolError(err)
 	}
 	var settings map[string]any
+	if body := strings.TrimSpace(string(current.Body)); body == "" || body == "null" {
+		return nil, nil, toolError(&chill.ValidationError{Code: "settings_unavailable", Message: "current settings are empty; refusing to save a partial object"})
+	}
 	if err := json.Unmarshal(current.Body, &settings); err != nil {
 		return nil, nil, fmt.Errorf("decode current user settings: %w", err)
 	}
-	if strings.TrimSpace(string(current.Body)) == "" || settings == nil {
-		settings = map[string]any{}
+	if len(settings) == 0 {
+		return nil, nil, toolError(&chill.ValidationError{Code: "settings_unavailable", Message: "current settings are empty; refusing to save a partial object"})
 	}
 	request := map[string]any{"settings": chill.ApplyUserSettingsPatch(settings, patch)}
 	result, err := server.call(ctx, req, chill.ProcedureUserSaveUserSettings, request)

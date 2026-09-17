@@ -49,7 +49,8 @@ the request.
 ## Stateless Transport
 
 The HTTP handler runs the SDK's stateless mode: no `Mcp-Session-Id`, no
-server-initiated requests, no event store, `GET` and `DELETE` answer `405`.
+server-initiated requests, no event store; with a bearer, `GET` and `DELETE`
+answer `405`, and without one every method answers `401`.
 Clients negotiate protocol `2026-07-28` or fall back to `2025-11-25`. There is
 no OAuth discovery endpoint by design.
 
