@@ -10,8 +10,12 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// MCPPath is the Streamable HTTP endpoint.
-const MCPPath = "/mcp"
+// MCPPath is the Streamable HTTP endpoint: the site root.
+const MCPPath = "/"
+
+// LegacyMCPPath is the original endpoint, kept as an alias for clients that
+// were configured before the root became canonical.
+const LegacyMCPPath = "/mcp"
 
 // HealthPath reports process liveness without contacting Engine.
 const HealthPath = "/health"
@@ -80,6 +84,8 @@ func (server *Server) Handler() http.Handler {
 		writer.Header().Set("Cache-Control", "no-store")
 		_, _ = writer.Write([]byte(`{"status":"ok"}` + "\n"))
 	})
-	mux.Handle(MCPPath, RequireBearer(streamable))
+	gated := RequireBearer(streamable)
+	mux.Handle("POST "+MCPPath+"{$}", gated)
+	mux.Handle("POST "+LegacyMCPPath, gated)
 	return mux
 }

@@ -33,7 +33,7 @@ sequenceDiagram
   participant Tool
   participant API
 
-  Client->>Gate: POST /mcp with Authorization: Bearer
+  Client->>Gate: POST / with Authorization: Bearer
   Gate-->>Client: 401 when missing or malformed
   Gate->>Tool: tools/call
   Tool->>Tool: validate input locally

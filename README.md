@@ -17,7 +17,7 @@ forwards your chill.institute bearer to the API. The stdio mode reuses a local
 Hosted, for any client that sends custom headers:
 
 ```bash
-claude mcp add --transport http chill https://mcp.chill.institute/mcp \
+claude mcp add --transport http chill https://mcp.chill.institute \
   --header "Authorization: Bearer <token>"
 ```
 
@@ -26,7 +26,7 @@ claude mcp add --transport http chill https://mcp.chill.institute/mcp \
   "mcpServers": {
     "chill": {
       "type": "http",
-      "url": "https://mcp.chill.institute/mcp",
+      "url": "https://mcp.chill.institute",
       "headers": { "Authorization": "Bearer <token>" }
     }
   }
@@ -98,7 +98,8 @@ CHILL_LISTEN_HOST=127.0.0.1 go run ./cmd/chill-mcp http
 | `CHILL_ENGINE_BASE_URL` | `https://api.chill.institute` | hosted API base |
 
 `GET /health` reports liveness without contacting the API. `chill-mcp health`
-probes it from inside the image. Requests to `/mcp` without a well-formed
+probes it from inside the image. The MCP endpoint is the site root; `/mcp`
+still works as an alias. Requests to it without a well-formed
 bearer get `401` with `WWW-Authenticate: Bearer`; the API decides whether a
 token is valid. The process logs no headers, tokens, or response bodies.
 

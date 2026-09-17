@@ -251,22 +251,45 @@ func TestHTTPRequiresBearerAndForwardsIt(t *testing.T) {
 		}
 	}
 
-	client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)
-	httpClient := &http.Client{Transport: bearerTransport{token: "user-token", next: web.Client().Transport}}
-	session, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: web.URL + MCPPath, HTTPClient: httpClient, DisableStandaloneSSE: true}, nil)
+	for _, path := range []string{MCPPath, LegacyMCPPath} {
+		client := mcp.NewClient(&mcp.Implementation{Name: "test", Version: "0"}, nil)
+		httpClient := &http.Client{Transport: bearerTransport{token: "user-token", next: web.Client().Transport}}
+		session, err := client.Connect(context.Background(), &mcp.StreamableClientTransport{Endpoint: web.URL + path, HTTPClient: httpClient, DisableStandaloneSSE: true}, nil)
+		if err != nil {
+			t.Fatalf("%s: Connect() error = %v", path, err)
+		}
+		t.Cleanup(func() { _ = session.Close() })
+		if session.ID() != "" {
+			t.Fatalf("%s: session id = %q, want stateless", path, session.ID())
+		}
+		result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "whoami", Arguments: map[string]any{}})
+		if err != nil || result.IsError {
+			t.Fatalf("%s: CallTool() = %v, %v", path, result, err)
+		}
+		if call := engine.last(t); call.Auth != "Bearer user-token" {
+			t.Fatalf("%s: forwarded authorization = %q", path, call.Auth)
+		}
+	}
+
+	for _, path := range []string{"/other", "/mcp/extra"} {
+		request, _ := http.NewRequest(http.MethodPost, web.URL+path, strings.NewReader(`{}`))
+		request.Header.Set("Authorization", "Bearer user-token")
+		response, err := web.Client().Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = response.Body.Close()
+		if response.StatusCode != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want 404", path, response.StatusCode)
+		}
+	}
+	get, err := http.Get(web.URL + "/")
 	if err != nil {
-		t.Fatalf("Connect() error = %v", err)
+		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = session.Close() })
-	if session.ID() != "" {
-		t.Fatalf("session id = %q, want stateless", session.ID())
-	}
-	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{Name: "whoami", Arguments: map[string]any{}})
-	if err != nil || result.IsError {
-		t.Fatalf("CallTool() = %v, %v", result, err)
-	}
-	if call := engine.last(t); call.Auth != "Bearer user-token" {
-		t.Fatalf("forwarded authorization = %q", call.Auth)
+	_ = get.Body.Close()
+	if get.StatusCode != http.StatusMethodNotAllowed {
+		t.Fatalf("GET / status = %d, want 405", get.StatusCode)
 	}
 }
 

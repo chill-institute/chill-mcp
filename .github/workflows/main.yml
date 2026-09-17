@@ -105,7 +105,7 @@ jobs:
           for _ in $(seq 1 50); do docker exec candidate /chill-mcp health 2>/dev/null && break; sleep 0.2; done
           docker exec candidate /chill-mcp health
           docker exec candidate /chill-mcp version | grep -F "chill-mcp $VERSION"
-          code="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:7100/mcp -H 'Content-Type: application/json' -d '{}')"
+          code="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:7100/ -H 'Content-Type: application/json' -d '{}')"
           [ "$code" = "401" ] || { echo "expected 401 without bearer, got $code"; exit 1; }
           docker rm -f candidate
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4

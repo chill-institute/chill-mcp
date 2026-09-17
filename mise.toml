@@ -76,7 +76,7 @@ go build -o ./chill-mcp ./cmd/chill-mcp
 trap 'kill "$pid" 2>/dev/null || true' EXIT
 for _ in $(seq 1 50); do ./chill-mcp health 2>/dev/null && break; sleep 0.1; done
 ./chill-mcp health
-code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$CHILL_LISTEN_PORT/mcp" -H 'Content-Type: application/json' -d '{}')"
+code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$CHILL_LISTEN_PORT/" -H 'Content-Type: application/json' -d '{}')"
 [ "$code" = "401" ] || { echo "expected 401 without bearer, got $code" >&2; exit 1; }
 printf 'smoke ok\\n'
 """
