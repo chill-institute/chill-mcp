@@ -102,7 +102,7 @@ func TestToolListMatchesContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListTools() error = %v", err)
 	}
-	want := map[string]bool{"search_releases": true, "list_movies": true, "list_tv_shows": true, "get_transfer": true, "whoami": true, "add_transfer": false}
+	want := map[string]bool{"search_releases": true, "list_movies": true, "list_tv_shows": true, "get_transfer": true, "whoami": true, "add_transfer": false, "get_tv_show": true, "get_tv_show_season": true, "find_episode_download": true, "find_season_downloads": true, "list_indexers": true, "get_download_folder": true, "browse_folder": true, "get_user_settings": true, "list_user_setting_fields": true, "update_user_setting": false}
 	if len(result.Tools) != len(want) {
 		t.Fatalf("tool count = %d, want %d", len(result.Tools), len(want))
 	}

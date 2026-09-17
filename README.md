@@ -62,13 +62,23 @@ connectors, cannot use the hosted endpoint. Use stdio there.
 | `search_releases` | Search indexers with your saved filters | `query`, optional `indexer_id` |
 | `list_movies` | Movie catalog for your source and sort | |
 | `list_tv_shows` | TV catalog for your provider | optional `source` |
+| `get_tv_show` | One show with its seasons | `imdb_id` |
+| `get_tv_show_season` | Episodes of one season | `imdb_id`, `season` |
+| `find_episode_download` | Best release for one episode | `imdb_id`, `season`, `episode` |
+| `find_season_downloads` | Season pack plus per-episode releases | `imdb_id`, `season` |
+| `list_indexers` | Your indexers with health | |
+| `get_download_folder` | Where new transfers land | |
+| `browse_folder` | Files and subfolders of one put.io folder | `id` |
 | `get_transfer` | One put.io transfer | `id` |
 | `whoami` | Your account profile | |
+| `get_user_settings` | Search, catalog, and download settings | |
+| `list_user_setting_fields` | Fields `update_user_setting` accepts | |
+| `update_user_setting` | Change one setting | `field`, `value`, `dry_run` |
 | `add_transfer` | Send a release to put.io | `url`, optional `movie_source` or `tv_source`, `dry_run` |
 
-Read-only tools carry `readOnlyHint`. `add_transfer` is marked destructive so
-clients ask first; pass `dry_run: true` to see the exact request without
-downloading. Input is validated locally before any request is built. Results
+Read-only tools carry `readOnlyHint`. `add_transfer` and `update_user_setting`
+are marked as mutations so clients ask first; pass `dry_run: true` to see the
+exact request without sending it. Input is validated locally before any request is built. Results
 are the API's JSON, returned as structured content.
 
 ## Develop

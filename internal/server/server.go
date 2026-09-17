@@ -67,6 +67,7 @@ func New(opts Options) (*Server, error) {
 		},
 	)
 	server.registerTools()
+	server.registerMoreTools()
 	return server, nil
 }
 

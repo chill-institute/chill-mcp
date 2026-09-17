@@ -25,8 +25,8 @@ mise run smoke
   protocol errors are reserved for transport problems.
 - Hosted strings are data. Do not log headers, tokens, request bodies, or API
   responses.
-- `add_transfer` is the only mutation; keep `dry_run` and destructive
-  annotations intact.
+- `add_transfer` and `update_user_setting` are the only mutations; keep
+  `dry_run` and their annotations intact.
 
 ## Ownership
 

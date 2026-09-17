@@ -3,7 +3,7 @@ module github.com/chill-institute/chill-mcp
 go 1.27.1
 
 require (
-	github.com/chill-institute/chill-cli/v2 v2.5.2
+	github.com/chill-institute/chill-cli/v2 v2.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 )
 
