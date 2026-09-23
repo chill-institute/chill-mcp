@@ -58,7 +58,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) int {
 	var err error
 	switch args[0] {
 	case "stdio":
-		err = runStdio(ctx, args[1:], logger)
+		err = runStdio(ctx, args[1:], stderr, logger)
 	case "http":
 		err = runHTTP(ctx, logger)
 	case "health":
@@ -86,7 +86,7 @@ func apiClient(baseURL string) *rpc.Client {
 	return rpc.NewClient(baseURL, nil, rpc.WithClientName(server.ClientName), rpc.WithClientVersion(buildinfo.Current().Version))
 }
 
-func runStdio(ctx context.Context, args []string, logger *slog.Logger) error {
+func runStdio(ctx context.Context, args []string, stderr io.Writer, logger *slog.Logger) error {
 	flags := flag.NewFlagSet("stdio", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	profile := flags.String("profile", "", "chilly profile name")
@@ -94,7 +94,7 @@ func runStdio(ctx context.Context, args []string, logger *slog.Logger) error {
 	configPath := flags.String("config", "", "chilly config file path")
 	if err := flags.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
-			flags.SetOutput(os.Stderr)
+			flags.SetOutput(stderr)
 			flags.Usage()
 			return errUsage
 		}

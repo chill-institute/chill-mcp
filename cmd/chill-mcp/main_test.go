@@ -27,6 +27,13 @@ func TestRunUsageAndVersion(t *testing.T) {
 	}
 }
 
+func TestStdioHelpWritesToStderr(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"stdio", "--help"}, &stdout, &stderr); code != 2 || !strings.Contains(stderr.String(), "-profile") {
+		t.Fatalf("run(stdio --help) = %d, stderr %q", code, stderr.String())
+	}
+}
+
 func TestStdioRequiresToken(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.json")
