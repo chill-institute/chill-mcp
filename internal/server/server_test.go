@@ -114,6 +114,9 @@ func TestToolListMatchesContract(t *testing.T) {
 		if tool.Annotations == nil || tool.Annotations.ReadOnlyHint != readOnly {
 			t.Fatalf("%s read-only hint = %v, want %v", tool.Name, tool.Annotations, readOnly)
 		}
+		if destructive := tool.Annotations.DestructiveHint; destructive == nil || *destructive == readOnly {
+			t.Fatalf("%s destructive hint set = %v, value = %v, want %v", tool.Name, destructive != nil, destructive != nil && *destructive, !readOnly)
+		}
 		if tool.Description == "" {
 			t.Fatalf("%s has no description", tool.Name)
 		}
