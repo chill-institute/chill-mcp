@@ -223,7 +223,3 @@ func redactedURL(raw string) string {
 	}
 	return parsed.Redacted()
 }
-
-func discardLogger() *slog.Logger {
-	return slog.New(slog.NewTextHandler(io.Discard, nil))
-}

@@ -40,7 +40,7 @@ type Server struct {
 	mcp   *mcp.Server
 }
 
-// New builds a server with the v1 tool set registered.
+// New builds a server with every tool registered.
 func New(opts Options) (*Server, error) {
 	if opts.API == nil {
 		return nil, errors.New("server: API client is required")

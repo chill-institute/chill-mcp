@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -51,7 +52,7 @@ func TestHTTPServesHealthAndStops(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { done <- runHTTP(ctx, discardLogger()) }()
+	go func() { done <- runHTTP(ctx, slog.New(slog.DiscardHandler)) }()
 
 	deadline := time.Now().Add(5 * time.Second)
 	for {
