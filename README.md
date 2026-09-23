@@ -78,8 +78,8 @@ connectors, cannot use the hosted endpoint. Use stdio there.
 
 Read-only tools carry `readOnlyHint`. `add_transfer` and `update_user_setting`
 are marked as mutations so clients ask first; pass `dry_run: true` to see the
-exact request without sending it. Input is validated locally before any request is built. Results
-are the API's JSON, returned as structured content.
+exact request without sending it. Input is validated locally before any request
+is built. Results are the API's JSON, returned as structured content.
 
 ## Develop
 
@@ -98,10 +98,9 @@ CHILL_LISTEN_HOST=127.0.0.1 go run ./cmd/chill-mcp http
 | `CHILL_ENGINE_BASE_URL` | `https://api.chill.institute` | hosted API base |
 
 `GET /health` reports liveness without contacting the API. `chill-mcp health`
-probes it from inside the image. The MCP endpoint is the site root; `/mcp`
-still works as an alias. Requests to it without a well-formed
-bearer get `401` with `WWW-Authenticate: Bearer`; the API decides whether a
-token is valid. The process logs no headers, tokens, or response bodies.
+probes it from inside the image. The MCP endpoint is the site root, with `/mcp`
+as an alias. Requests to it without a well-formed bearer get `401` with
+`WWW-Authenticate: Bearer`; the API decides whether a token is valid. The process logs no headers, tokens, or response bodies.
 
 Every push to `main` cuts a semantic-release version and GitHub release, then
 publishes `ghcr.io/chill-institute/chill-mcp` as `:X.Y.Z`, `:X.Y`, `:X`,

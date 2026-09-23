@@ -64,8 +64,9 @@ text.
 ## Delivery
 
 Pull requests run `mise run verify`, `mise run smoke`, and an image build.
-Pushes to `main` verify, let semantic-release tag a version and GitHub
-release as `chill-ci`, build the image with that version, boot it read-only
-with all capabilities dropped, prove health, the version, and the `401` gate,
-publish versioned tags to `ghcr.io/chill-institute/chill-mcp`, record the
-digest on the release, and dispatch the production deploy with it.
+On `main`, after verification, semantic-release tags a version and GitHub
+release as `chill-ci`. The workflow builds the image with that version, boots
+it read-only with all capabilities dropped, and checks health, the version, and
+the `401` gate. It then publishes versioned tags to
+`ghcr.io/chill-institute/chill-mcp`, records the digest on the release, and
+dispatches the production deploy with it.
