@@ -34,4 +34,7 @@ jobs:
       - name: Prove the image boots
         env:
           SHA: ${{ github.sha }}
-        run: scripts/image.sh prove "$(scripts/image.sh build chill-mcp:pr pr "$SHA")" pr
+        run: |
+          set -euo pipefail
+          id="$(scripts/image.sh build chill-mcp:pr pr "$SHA")"
+          scripts/image.sh prove "$id" pr
