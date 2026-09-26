@@ -2,12 +2,13 @@ name: Verify
 
 on:
   pull_request:
+  workflow_dispatch:
 
 permissions: {}
 
 concurrency:
   group: verify-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -38,3 +39,7 @@ jobs:
           set -euo pipefail
           id="$(scripts/image.sh build chill-mcp:pr pr "$SHA")"
           scripts/image.sh prove "$id" pr
+
+      - name: Scan pushed range
+        if: ${{ !cancelled() }}
+        uses: chill-institute/.github/.github/actions/scan@04bad7d160da50b0509abfd5ff2e382aaf7d1aef # v1.0.0
