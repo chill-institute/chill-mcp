@@ -46,35 +46,16 @@ jobs:
       deployment: false
     permissions:
       contents: read
-      packages: write
-    env:
-      IMAGE_NAME: ghcr.io/chill-institute/chill-mcp
+    outputs:
+      publish: ${{ steps.decide.outputs.publish }}
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      image: ${{ steps.image.outputs.id }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
-
-      # The image is built and proven before any tag or release exists, so a
-      # version can never be published without a working payload.
-      - name: Build the release candidate
-        env:
-          SHA: ${{ github.sha }}
-        run: |
-          docker build \
-            --build-arg "VERSION=candidate" \
-            --build-arg "COMMIT=$SHA" \
-            --label "org.opencontainers.image.revision=$SHA" \
-            -t chill-mcp:candidate .
-      - name: Prove the candidate boots
-        run: |
-          docker run -d --name candidate --read-only --cap-drop ALL --security-opt no-new-privileges:true \
-            -e CHILL_ENGINE_BASE_URL=http://127.0.0.1:9 -p 127.0.0.1:7100:7100 chill-mcp:candidate
-          for _ in $(seq 1 50); do docker exec candidate /chill-mcp health 2>/dev/null && break; sleep 0.2; done
-          docker exec candidate /chill-mcp health
-          code="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://127.0.0.1:7100/ -H 'Content-Type: application/json' -d '{}')"
-          [ "$code" = "401" ] || { echo "expected 401 without bearer, got $code"; exit 1; }
-          docker rm -f candidate
 
       - name: Mint a chill-ci token for this repository
         id: app
@@ -85,11 +66,12 @@ jobs:
           owner: chill-institute
           repositories: chill-mcp
           permission-contents: write
-      - name: Tag and release
-        id: semantic
+      - name: Plan the release
+        id: plan
         uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
         with:
           semantic_version: 25.0.9
+          dry_run: true
           extra_plugins: |
             conventional-changelog-conventionalcommits@9.3.1
         env:
@@ -97,16 +79,18 @@ jobs:
       - name: Resolve the version to publish
         id: version
         env:
-          PUBLISHED: ${{ steps.semantic.outputs.new_release_published }}
-          NEW_TAG: ${{ steps.semantic.outputs.new_release_git_tag }}
+          PLANNED_TAG: ${{ steps.plan.outputs.new_release_git_tag }}
         run: |
           set -euo pipefail
           git fetch --force --tags origin
-          tag="$NEW_TAG"
+          tag="$PLANNED_TAG"
           # A re-run after a failed publish finds the tag already on HEAD.
-          [ "$PUBLISHED" = "true" ] || tag="$(git tag --points-at HEAD --list 'v*' --sort=-version:refname | head -n1)"
+          [ -n "$tag" ] || tag="$(git tag --points-at HEAD --list 'v*' --sort=-version:refname | head -n1)"
           if [ -z "$tag" ]; then
-            echo "publish=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "publish=false"
+              echo "version=candidate"
+            } >> "$GITHUB_OUTPUT"
             echo "No release for this commit; nothing to publish." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
@@ -117,61 +101,185 @@ jobs:
             echo "version=${tag#v}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build the versioned image
-        if: ${{ steps.version.outputs.publish == 'true' }}
+      # The pushed image is this build: it is proven before any tag exists and
+      # carried to the publish job by image ID, never rebuilt.
+      - name: Build the image
+        id: image
         env:
           SHA: ${{ github.sha }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          docker build \
-            --build-arg "VERSION=$VERSION" \
-            --build-arg "COMMIT=$SHA" \
-            --label "org.opencontainers.image.revision=$SHA" \
-            --label "org.opencontainers.image.version=$VERSION" \
-            -t chill-mcp:release .
-          docker run --rm chill-mcp:release version | grep -F "chill-mcp $VERSION"
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+          set -euo pipefail
+          id="$(scripts/image.sh build chill-mcp:release "$VERSION" "$SHA")"
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+      - name: Prove the image boots
+        env:
+          IMAGE_ID: ${{ steps.image.outputs.id }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/image.sh prove "$IMAGE_ID" "$VERSION"
+
+      - name: Tag and draft the release
+        id: semantic
         if: ${{ steps.version.outputs.publish == 'true' }}
+        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
+        with:
+          semantic_version: 25.0.9
+          extra_plugins: |
+            conventional-changelog-conventionalcommits@9.3.1
+        env:
+          GITHUB_TOKEN: ${{ steps.app.outputs.token }}
+      - name: Confirm the release matches the proven version
+        id: decide
+        if: ${{ steps.version.outputs.publish == 'true' }}
+        env:
+          PUBLISHED: ${{ steps.semantic.outputs.new_release_published }}
+          NEW_TAG: ${{ steps.semantic.outputs.new_release_git_tag }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          if [ "$PUBLISHED" = "true" ]; then
+            [ "$NEW_TAG" = "$RELEASE_TAG" ] || { echo "::error::released $NEW_TAG but proved $RELEASE_TAG"; exit 1; }
+          elif ! git tag --points-at HEAD | grep -qFx "$RELEASE_TAG"; then
+            if [ "$(git rev-parse origin/main)" != "$GITHUB_SHA" ]; then
+              echo "origin/main moved past $GITHUB_SHA before $RELEASE_TAG was tagged; the newer run releases." | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "publish=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::$RELEASE_TAG is not on HEAD"
+            exit 1
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+      - name: Save the proven image
+        if: ${{ steps.decide.outputs.publish == 'true' }}
+        env:
+          IMAGE_ID: ${{ steps.image.outputs.id }}
+        run: |
+          set -euo pipefail
+          [ "$(docker image inspect chill-mcp:release --format '{{.Id}}')" = "$IMAGE_ID" ]
+          docker save -o "$RUNNER_TEMP/chill-mcp.tar" chill-mcp:release
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ steps.decide.outputs.publish == 'true' }}
+        with:
+          name: chill-mcp-image
+          path: ${{ runner.temp }}/chill-mcp.tar
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: release
+    if: ${{ needs.release.outputs.publish == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    concurrency:
+      group: publish-${{ github.repository }}-main
+      cancel-in-progress: false
+    environment:
+      name: publish
+      deployment: false
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    env:
+      IMAGE_NAME: ghcr.io/chill-institute/chill-mcp
+      IMAGE_ID: ${{ needs.release.outputs.image }}
+      RELEASE_TAG: ${{ needs.release.outputs.tag }}
+      VERSION: ${{ needs.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chill-mcp-image
+          path: ${{ runner.temp }}/image
+      - name: Load the proven image
+        run: |
+          set -euo pipefail
+          docker load -i "$RUNNER_TEMP/image/chill-mcp.tar"
+          loaded="$(docker image inspect chill-mcp:release --format '{{.Id}}')"
+          [ "$loaded" = "$IMAGE_ID" ] || { echo "::error::loaded $loaded but proved $IMAGE_ID"; exit 1; }
+      # Floating tags and production move only for the newest release on the
+      # current main tip, so re-running an older run cannot roll them back.
+      - name: Decide whether this release is current
+        id: current
+        run: |
+          set -euo pipefail
+          git fetch --force --tags origin
+          latest="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
+          if [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ] && [ "$latest" = "$RELEASE_TAG" ]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "$RELEASE_TAG is not the newest release on the main tip; publishing only :$VERSION and :sha-${GITHUB_SHA::12}." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Publish the versioned image
+      - name: Publish the proven image
         id: publish
-        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
-          SHA: ${{ github.sha }}
-          VERSION: ${{ steps.version.outputs.version }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          CURRENT: ${{ steps.current.outputs.current }}
         run: |
           set -euo pipefail
-          major="${VERSION%%.*}"; minor="${VERSION%.*}"
-          for tag in "$VERSION" "$minor" "$major" latest main "sha-${SHA::12}"; do
-            docker tag chill-mcp:release "$IMAGE_NAME:$tag"
+          tags=("$VERSION" "sha-${GITHUB_SHA::12}")
+          if [ "$CURRENT" = "true" ]; then
+            tags+=("${VERSION%.*}" "${VERSION%%.*}" latest main)
+          fi
+          for tag in "${tags[@]}"; do
+            docker tag "$IMAGE_ID" "$IMAGE_NAME:$tag"
             docker push "$IMAGE_NAME:$tag"
           done
-          digest_ref="$(docker image inspect "$IMAGE_NAME:$VERSION" --format '{{join .RepoDigests "\n"}}' | grep -E "^$IMAGE_NAME@sha256:[0-9a-f]{64}$" | head -n1)"
+          digest_ref="$(docker image inspect "$IMAGE_ID" --format '{{join .RepoDigests "\n"}}' | grep -E "^$IMAGE_NAME@sha256:[0-9a-f]{64}$" | head -n1)"
           [ -n "$digest_ref" ] || { echo "no digest reference for $IMAGE_NAME:$VERSION"; exit 1; }
-          echo "ref=$digest_ref" >> "$GITHUB_OUTPUT"
-          printf '## Published %s\n\n~~~\n%s:%s\n%s\n~~~\n' "$RELEASE_TAG" "$IMAGE_NAME" "$VERSION" "$digest_ref" >> "$GITHUB_STEP_SUMMARY"
-      - name: Record the image on the release
-        if: ${{ steps.version.outputs.publish == 'true' }}
+          {
+            echo "ref=$digest_ref"
+            echo "digest=${digest_ref#*@}"
+          } >> "$GITHUB_OUTPUT"
+          printf '## Published %s\n\n~~~\n%s:%s\n%s\nimage ID %s\n~~~\n' "$RELEASE_TAG" "$IMAGE_NAME" "$VERSION" "$digest_ref" "$IMAGE_ID" >> "$GITHUB_STEP_SUMMARY"
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+
+      - name: Mint a chill-ci token for this repository
+        id: app
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CHILL_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.CHILL_CI_APP_PRIVATE_KEY }}
+          owner: chill-institute
+          repositories: chill-mcp
+          permission-contents: write
+      - name: Record the image and publish the release
         env:
           GH_TOKEN: ${{ steps.app.outputs.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          VERSION: ${{ steps.version.outputs.version }}
           IMAGE_REF: ${{ steps.publish.outputs.ref }}
+          CURRENT: ${{ steps.current.outputs.current }}
         run: |
           set -euo pipefail
-          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body > "$RUNNER_TEMP/body.md"
+          if ! gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body > "$RUNNER_TEMP/body.md" 2> "$RUNNER_TEMP/view.err"; then
+            grep -q "release not found" "$RUNNER_TEMP/view.err" || { cat "$RUNNER_TEMP/view.err" >&2; exit 1; }
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes
+            gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body > "$RUNNER_TEMP/body.md"
+          fi
           # Idempotent: drop any earlier image section before appending this one.
           awk '/^## Image$/ {exit} {print}' "$RUNNER_TEMP/body.md" | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' > "$RUNNER_TEMP/notes.md"
           printf '\n\n## Image\n\n~~~\n%s:%s\n%s\n~~~\n' "$IMAGE_NAME" "$VERSION" "$IMAGE_REF" >> "$RUNNER_TEMP/notes.md"
-          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --notes-file "$RUNNER_TEMP/notes.md" --draft=false --latest="$CURRENT"
 
       - name: Mint a chill-ci token for chill-engine
         id: engine
-        if: ${{ steps.version.outputs.publish == 'true' }}
+        if: ${{ steps.current.outputs.current == 'true' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           client-id: ${{ vars.CHILL_CI_APP_CLIENT_ID }}
@@ -180,7 +288,7 @@ jobs:
           repositories: chill-engine
           permission-actions: write
       - name: Deploy through chill-engine
-        if: ${{ steps.version.outputs.publish == 'true' }}
+        if: ${{ steps.current.outputs.current == 'true' }}
         env:
           GH_TOKEN: ${{ steps.engine.outputs.token }}
           IMAGE_REF: ${{ steps.publish.outputs.ref }}

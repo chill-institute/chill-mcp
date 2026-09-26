@@ -31,4 +31,10 @@ jobs:
             ${{ runner.os }}-go-
       - run: mise run verify
       - run: mise run smoke
-      - run: docker build -t chill-mcp:pr .
+      - name: Prove the image boots
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          id="$(scripts/image.sh build chill-mcp:pr pr "$SHA")"
+          scripts/image.sh prove "$id" pr

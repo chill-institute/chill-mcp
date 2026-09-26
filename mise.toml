@@ -82,8 +82,13 @@ printf 'smoke ok\\n'
 """
 
 [tasks."docker:build"]
-description = "Build the release image locally"
-run = "docker build -t chill-mcp:local ."
+description = "Build the release image locally through the release build path"
+run = "scripts/image.sh build chill-mcp:local dev \"$(git rev-parse HEAD)\""
+
+[tasks."docker:prove"]
+description = "Boot the local image read-only and prove version, health, and the bearer gate"
+depends = ["docker:build"]
+run = "PROOF_PORT=\"${PROOF_PORT:-7198}\" scripts/image.sh prove chill-mcp:local dev"
 
 [tasks.hooks]
 description = "Install repo git hooks"
