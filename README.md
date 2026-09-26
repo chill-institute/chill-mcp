@@ -102,7 +102,8 @@ probes it from inside the image. The MCP endpoint is the site root, with `/mcp`
 as an alias. Requests to it without a well-formed bearer get `401` with
 `WWW-Authenticate: Bearer`; the API decides whether a token is valid. The process logs no headers, tokens, or response bodies.
 
-Every push to `main` cuts a semantic-release version and GitHub release, then
+Every `feat`, `fix`, `perf`, `refactor`, `revert` or breaking change on `main`
+cuts a semantic-release version and GitHub release, then
 publishes `ghcr.io/chill-institute/chill-mcp` as `:X.Y.Z`, `:X.Y`, `:X`,
 `:latest`, `:main`, and `:sha-<commit>`. The release notes carry the image
 digest, and that digest is deployed to `mcp.chill.institute` through the

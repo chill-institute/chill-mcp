@@ -20,12 +20,17 @@ The pre-push hook runs `mise run verify`.
 | Tools, validation, error mapping | `mise run verify` (format, tidy, lint, tests at 80% coverage, govulncheck); tests drive an in-process MCP client against a fake API | local, pre-push, [PR](./.github/workflows/verify.yml), [main](./.github/workflows/main.yml) `verify` | exit status, `coverage.out` |
 | Transport, bearer gate, process lifecycle | `mise run smoke`: built binary on `127.0.0.1:7199`, `health`, `401` without bearer | local, [PR](./.github/workflows/verify.yml), [main](./.github/workflows/main.yml) `verify` | exit status, `./chill-mcp` |
 | Image | `mise run docker:prove`: `scripts/image.sh` builds, then boots read-only and checks version, health, and `401` | local, [PR](./.github/workflows/verify.yml), [main](./.github/workflows/main.yml) `release` on the exact image ID that `publish` loads and pushes | `chill-mcp:local` |
+| Release rules, locked semantic-release | `npm ci --prefix .github/release --ignore-scripts`, then `node .github/release/smoke.mjs` | local, PR [Verify](./.github/workflows/verify.yml) | exit status |
 | Workflows | `mise run actions` (actionlint, zizmor; inside verify) | local, CI with verify | exit status |
 | Pushed workflow changes | [shared scan](https://github.com/chill-institute/.github/tree/main/.github/actions/scan), last step of the `verify` job in [Main](./.github/workflows/main.yml) and [Verify](./.github/workflows/verify.yml): Actionlint and Zizmor when the pushed range touches workflows; secrets rely on GitHub secret scanning | CI on push to `main` (pushed range) and Verify dispatch (full history) | failed run |
 | Release and deploy | push to `main` | [main](./.github/workflows/main.yml) `release` and `publish`, then chill-engine `deploy-mcp.yml`, which checks private and public `/health` | tag, GitHub release with image digest, `ghcr.io/chill-institute/chill-mcp` tags with build provenance, deployed `mcp.chill.institute` |
 
-Each commit type listed in [`.releaserc.json`](./.releaserc.json), including
-`docs`, publishes an image and deploys it to production.
+Only `feat` (minor), `fix`, `perf`, `refactor`, `revert` (patch) and breaking
+(major) commits from `main`,
+publish an image and deploy it; `docs`, `test`, `build`, `ci`, `chore`
+and `deps` do not. The rule set is the commit-analyzer `releaseRules` in
+[`.releaserc.json`](./.releaserc.json), identical in every chill.institute
+package repo; [`smoke.mjs`](./.github/release/smoke.mjs) fails when it drifts.
 
 Gaps:
 
