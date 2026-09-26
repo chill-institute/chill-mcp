@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose a new tool or improvement
+title: "[feature] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: What should become possible, and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: contract
+    attributes:
+      label: Tool contract
+      description: Suggest a tool name, inputs, result shape, or safety boundary if useful.
