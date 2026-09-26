@@ -63,10 +63,12 @@ text.
 
 ## Delivery
 
-Pull requests run `mise run verify`, `mise run smoke`, and an image build.
-On `main`, after verification, semantic-release tags a version and GitHub
-release as `chill-ci`. The workflow builds the image with that version, boots
-it read-only with all capabilities dropped, and checks health, the version, and
-the `401` gate. It then publishes versioned tags to
-`ghcr.io/chill-institute/chill-mcp`, records the digest on the release, and
-dispatches the production deploy with it.
+Pull requests run `mise run verify`, `mise run smoke`, and the image proof.
+On `main`, after verification, a semantic-release dry run picks the next
+version. `scripts/image.sh` builds the image once with that version, boots it
+read-only with all capabilities dropped, and checks the version, health, and
+the `401` gate. Only then does semantic-release tag the version and create a
+draft GitHub release as `chill-ci`. The workflow pushes that same image ID to
+`ghcr.io/chill-institute/chill-mcp` under every tag, attests its build
+provenance to the registry, records the digest on the release, publishes the
+draft, and dispatches the production deploy with the digest.

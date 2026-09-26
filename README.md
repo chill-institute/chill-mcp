@@ -106,7 +106,12 @@ Every push to `main` cuts a semantic-release version and GitHub release, then
 publishes `ghcr.io/chill-institute/chill-mcp` as `:X.Y.Z`, `:X.Y`, `:X`,
 `:latest`, `:main`, and `:sha-<commit>`. The release notes carry the image
 digest, and that digest is deployed to `mcp.chill.institute` through the
-hosting repository's deploy workflow before the run finishes.
+hosting repository's deploy workflow before the run finishes. Each published
+digest carries build provenance:
+
+```bash
+gh attestation verify oci://ghcr.io/chill-institute/chill-mcp:X.Y.Z --owner chill-institute
+```
 
 [Architecture](./docs/ARCHITECTURE.md) · [Contributing](./CONTRIBUTING.md) ·
 [Security](./SECURITY.md) · [MIT License](./LICENSE)
