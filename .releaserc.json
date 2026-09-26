@@ -6,6 +6,7 @@
     [
       "@semantic-release/commit-analyzer",
       {
+        "preset": "conventionalcommits",
         "releaseRules": [
           {
             "breaking": true,
@@ -32,27 +33,10 @@
             "release": "patch"
           },
           {
-            "type": "docs",
-            "release": "patch"
-          },
-          {
-            "type": "test",
-            "release": "patch"
-          },
-          {
-            "type": "build",
-            "release": "patch"
-          },
-          {
-            "type": "ci",
-            "release": "patch"
-          },
-          {
-            "type": "chore",
+            "type": "revert",
             "release": "patch"
           }
-        ],
-        "preset": "conventionalcommits"
+        ]
       }
     ],
     [
