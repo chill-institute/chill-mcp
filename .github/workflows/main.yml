@@ -60,6 +60,12 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Install locked semantic-release
+        run: npm ci --prefix .github/release --ignore-scripts --no-audit --no-fund
 
       - name: Mint a chill-ci token for this repository
         id: app
@@ -72,12 +78,7 @@ jobs:
           permission-contents: write
       - name: Plan the release
         id: plan
-        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
-        with:
-          semantic_version: 25.0.9
-          dry_run: true
-          extra_plugins: |
-            conventional-changelog-conventionalcommits@9.3.1
+        run: node .github/release/release.mjs --dry-run
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
       - name: Resolve the version to publish
@@ -125,11 +126,7 @@ jobs:
       - name: Tag and draft the release
         id: semantic
         if: ${{ steps.version.outputs.publish == 'true' }}
-        uses: cycjimmy/semantic-release-action@b12c8f6015dc215fe37bc154d4ad456dd3833c90 # v6.0.0
-        with:
-          semantic_version: 25.0.9
-          extra_plugins: |
-            conventional-changelog-conventionalcommits@9.3.1
+        run: node .github/release/release.mjs
         env:
           GITHUB_TOKEN: ${{ steps.app.outputs.token }}
       - name: Confirm the release matches the proven version
