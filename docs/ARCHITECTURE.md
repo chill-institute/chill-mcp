@@ -64,11 +64,17 @@ text.
 ## Delivery
 
 Pull requests run `mise run verify`, `mise run smoke`, and the image proof.
-On `main`, after verification, a semantic-release dry run picks the next
-version. `scripts/image.sh` builds the image once with that version, boots it
-read-only with all capabilities dropped, and checks the version, health, and
-the `401` gate. Only then does semantic-release tag the version and create a
-draft GitHub release as `chill-ci`. The workflow pushes that same image ID to
-`ghcr.io/chill-institute/chill-mcp` under every tag, attests its build
-provenance to the registry, records the digest on the release, publishes the
-draft, and dispatches the production deploy with the digest.
+On `main`, after verification, the `release` job runs a semantic-release dry
+run to pick the next version. `scripts/image.sh` builds the image once with
+that version, boots it read-only with all capabilities dropped, and checks the
+version, health, and the `401` gate. Only then does semantic-release tag the
+version and create a draft GitHub release as `chill-ci`. The job hands the
+proven image to the `publish` job as a `docker save` artifact.
+
+`publish` alone holds package, attestation, and OIDC write permissions and
+runs no npm code. It loads the image and fails unless the image ID matches the
+proven one. It pushes `:X.Y.Z` and `:sha-<commit>`, attests build provenance to
+the registry, records the digest on the release (recreating a missing draft),
+and publishes it. The floating tags, the latest-release mark, and the
+production deploy move only when the release is the newest `v*` tag on the
+`main` tip, so re-running an older run cannot roll them back.
