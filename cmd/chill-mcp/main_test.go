@@ -71,7 +71,10 @@ func TestHTTPServesHealthAndStops(t *testing.T) {
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
-	response, err := http.Post("http://127.0.0.1:"+port+"/mcp", "application/json", strings.NewReader("{}"))
+	// net/http's Shutdown waits up to 5s for a pooled connection that never sent a
+	// request; the default client can leave one behind right after a health check.
+	client := &http.Client{Transport: &http.Transport{DisableKeepAlives: true}}
+	response, err := client.Post("http://127.0.0.1:"+port+"/mcp", "application/json", strings.NewReader("{}"))
 	if err != nil {
 		t.Fatal(err)
 	}
