@@ -29,8 +29,8 @@ func TestRunUsageAndVersion(t *testing.T) {
 
 func TestStdioHelpWritesToStderr(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	if code := run([]string{"stdio", "--help"}, &stdout, &stderr); code != 2 || !strings.Contains(stderr.String(), "-profile") {
-		t.Fatalf("run(stdio --help) = %d, stderr %q", code, stderr.String())
+	if code := run([]string{"stdio", "--help"}, &stdout, &stderr); code != 2 || !strings.Contains(stderr.String(), "-profile") || stdout.Len() != 0 {
+		t.Fatalf("run(stdio --help) = %d, stdout %q, stderr %q", code, stdout.String(), stderr.String())
 	}
 }
 
