@@ -51,8 +51,9 @@ the request.
 The HTTP handler runs the SDK's stateless mode: no `Mcp-Session-Id`, no
 server-initiated requests, no event store; with a bearer, `GET` and `DELETE`
 answer `405`, and without one every method answers `401`.
-Clients negotiate protocol `2026-07-28` or fall back to `2025-11-25`. There is
-no OAuth discovery endpoint by design.
+Protocol version negotiation belongs to the
+[Go SDK](https://github.com/modelcontextprotocol/go-sdk) pinned in
+[`go.mod`](../go.mod). It serves no OAuth discovery endpoint by design.
 
 ## Errors
 
@@ -63,18 +64,18 @@ text.
 
 ## Delivery
 
-Pull requests run `mise run verify`, `mise run smoke`, and the image proof.
-On `main`, after verification, the `release` job runs a semantic-release dry
-run to pick the next version. `scripts/image.sh` builds the image once with
-that version, boots it read-only with all capabilities dropped, and checks the
-version, health, and the `401` gate. Only then does semantic-release tag the
-version and create a draft GitHub release as `chill-ci`. The job hands the
-proven image to the `publish` job as a `docker save` artifact.
+[Main](../.github/workflows/main.yml) owns the release steps. Pull requests run
+`mise run verify`, `mise run smoke`, and the image proof. On `main`, the
+`release` job picks the next version with a semantic-release dry run, builds
+the image once with [`scripts/image.sh`](../scripts/image.sh), boots it
+read-only with all capabilities dropped, and checks the version, health, and
+the `401` gate. Only then does semantic-release tag the version and create a
+draft release; the proven image moves to `publish` as a `docker save`
+artifact.
 
 `publish` alone holds package, attestation, and OIDC write permissions and
-runs no npm code. It loads the image and fails unless the image ID matches the
-proven one. It pushes `:X.Y.Z` and `:sha-<commit>`, attests build provenance to
-the registry, records the digest on the release (recreating a missing draft),
-and publishes it. The floating tags, the latest-release mark, and the
-production deploy move only when the release is the newest `v*` tag on the
-`main` tip, so re-running an older run cannot roll them back.
+runs no npm code. It fails unless the loaded image ID matches the proven one,
+then pushes, attests provenance, records the digest on the release, and
+publishes it. Floating tags, the latest-release mark, and the production
+deploy move only when the release is the newest `v*` tag on the `main` tip, so
+re-running an older run cannot roll them back.

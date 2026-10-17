@@ -91,24 +91,20 @@ mise run smoke
 CHILL_LISTEN_HOST=127.0.0.1 go run ./cmd/chill-mcp http
 ```
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `CHILL_LISTEN_HOST` | `127.0.0.1` | bind address; the image binds `0.0.0.0` |
-| `CHILL_LISTEN_PORT` | `7100` | listen port |
-| `CHILL_ENGINE_BASE_URL` | `https://api.chill.institute` | hosted API base |
+`CHILL_LISTEN_HOST`, `CHILL_LISTEN_PORT`, and `CHILL_ENGINE_BASE_URL` set the
+bind address, port, and API base. Defaults live in
+[`cmd/chill-mcp/main.go`](./cmd/chill-mcp/main.go); the
+[`Dockerfile`](./Dockerfile) binds `0.0.0.0`.
 
 `GET /health` reports liveness without contacting the API. `chill-mcp health`
 probes it from inside the image. The MCP endpoint is the site root, with `/mcp`
 as an alias. Requests to it without a well-formed bearer get `401` with
-`WWW-Authenticate: Bearer`; the API decides whether a token is valid. The process logs no headers, tokens, or response bodies.
+`WWW-Authenticate: Bearer`; the API decides whether a token is valid. The
+process logs no headers, tokens, or response bodies.
 
-Every `feat`, `fix`, `perf`, `refactor`, `revert` or breaking change on `main`
-cuts a semantic-release version and GitHub release, then
-publishes `ghcr.io/chill-institute/chill-mcp` as `:X.Y.Z`, `:X.Y`, `:X`,
-`:latest`, `:main`, and `:sha-<commit>`. The release notes carry the image
-digest, and that digest is deployed to `mcp.chill.institute` through the
-hosting repository's deploy workflow before the run finishes. Each published
-digest carries build provenance:
+Releases publish `ghcr.io/chill-institute/chill-mcp` with build provenance
+and deploy the digest to `mcp.chill.institute`; see
+[Delivery](./docs/ARCHITECTURE.md#delivery). Verify an image:
 
 ```bash
 gh attestation verify oci://ghcr.io/chill-institute/chill-mcp:X.Y.Z --owner chill-institute
