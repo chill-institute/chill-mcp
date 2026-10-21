@@ -1,6 +1,6 @@
 module github.com/chill-institute/chill-mcp
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/chill-institute/chill-cli/v2 v2.6.14
