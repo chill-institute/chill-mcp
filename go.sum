@@ -100,8 +100,8 @@ github.com/charmbracelet/x/termios v0.1.1 h1:o3Q2bT8eqzGnGPOYheoYS8eEleT5ZVNYNy8
 github.com/charmbracelet/x/termios v0.1.1/go.mod h1:rB7fnv1TgOPOyyKRJ9o+AsTU/vK5WHJ2ivHeut/Pcwo=
 github.com/charmbracelet/x/windows v0.2.2 h1:IofanmuvaxnKHuV04sC0eBy/smG6kIKrWG2/jYn2GuM=
 github.com/charmbracelet/x/windows v0.2.2/go.mod h1:/8XtdKZzedat74NQFn0NGlGL4soHB0YQZrETF96h75k=
-github.com/chill-institute/chill-cli/v2 v2.6.14 h1:/XmW/EKdB/cjubfQ26XZ1rPUhKiSVryljz4aBfwiO0k=
-github.com/chill-institute/chill-cli/v2 v2.6.14/go.mod h1:+s+FlXfikSQ7zblke2D7PGeOvkcSBNJmif0I/WBDeow=
+github.com/chill-institute/chill-cli/v2 v2.6.15 h1:B59CsrnPd6ueSpPzToUClYcv15GibHnmXBlAdEgpQo4=
+github.com/chill-institute/chill-cli/v2 v2.6.15/go.mod h1:naZVBo4MD1wICt2lggstw1yhLeGBOnnECnBlQ1mQ5AU=
 github.com/ckaznocha/intrange v0.3.1 h1:j1onQyXvHUsPWujDH6WIjhyH26gkRt/txNlV7LspvJs=
 github.com/ckaznocha/intrange v0.3.1/go.mod h1:QVepyz1AkUoFQkpEqksSYpNpUo3c5W7nWh/s6SHIJJk=
 github.com/clipperhouse/displaywidth v0.11.0 h1:lBc6kY44VFw+TDx4I8opi/EtL9m20WSEFgwIwO+UVM8=
