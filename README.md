@@ -8,7 +8,7 @@ and send downloads to put.io, one validated API call per tool.
 
 ## Install
 
-Get a token at <https://chill.institute/auth/setup-token> and treat it as a
+Get a token at <https://chill.institute/auth/chilly-token> and treat it as a
 password; it stays valid until you sign out or replace it. Clients that send
 custom headers use `https://mcp.chill.institute` with that bearer:
 
@@ -43,17 +43,18 @@ go install github.com/chill-institute/chill-mcp/cmd/chill-mcp@latest
 | `whoami` | Your account profile | |
 | `get_user_settings` | Search, catalog, and download settings | |
 | `list_user_setting_fields` | Fields `update_user_setting` accepts | |
-| `update_user_setting` | Change one setting | `field`, `value`, `dry_run` |
-| `add_transfer` | Send a release to put.io | `url`, `movie_source`? or `tv_source`?, `dry_run` |
+| `update_user_setting` | Change one setting | `field`, `value`, `dry_run`? |
+| `add_transfer` | Send a release to put.io | `url`, `movie_source`? or `tv_source`?, `dry_run`? |
 
 `?` marks optional input. Mutations are annotated so clients ask first, and
 `dry_run: true` returns the request unsent. Results are the API's JSON.
 
 ## Develop
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md). `CHILL_LISTEN_HOST`, `CHILL_LISTEN_PORT`,
-and `CHILL_ENGINE_BASE_URL` set the bind address, port, and API base
-([defaults](./cmd/chill-mcp/main.go)). Verify a release image with
+See [CONTRIBUTING.md](./CONTRIBUTING.md). For `http`, `CHILL_LISTEN_HOST` and
+`CHILL_LISTEN_PORT` set the bind address ([defaults](./cmd/chill-mcp/main.go)),
+and `CHILL_ENGINE_BASE_URL` sets the API base (`https://api.chill.institute`
+when unset). Verify a release image with
 `gh attestation verify oci://ghcr.io/chill-institute/chill-mcp:X.Y.Z --owner chill-institute`.
 
 [Architecture](./docs/architecture.md) · [Security](./SECURITY.md) ·

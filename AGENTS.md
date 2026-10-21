@@ -33,7 +33,7 @@ mise run smoke
 
 | Change | Check | CI |
 | --- | --- | --- |
-| Go, docs, workflows | `mise run verify`: format, lint, 80% coverage, govulncheck, actionlint, zizmor; tests drive an in-process MCP client against a fake API | [Verify](./.github/workflows/verify.yml), [Main](./.github/workflows/main.yml) |
+| Go, docs, workflows | `mise run verify`: format, module tidiness, lint, 80% coverage, govulncheck, actionlint, zizmor; tests drive an in-process MCP client against a fake API | [Verify](./.github/workflows/verify.yml), [Main](./.github/workflows/main.yml) |
 | Transport, bearer gate, lifecycle | `mise run smoke`: built binary, `health`, `401` without bearer | Verify, Main |
 | Image | `mise run docker:prove`: read-only boot, version, health, `401` | Verify, Main `release` on the published image ID |
 | Release rules | `npm ci --prefix .github/release --ignore-scripts && node .github/release/smoke.mjs` | Verify |
