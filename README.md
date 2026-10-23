@@ -9,8 +9,9 @@ and send downloads to put.io, one validated API call per tool.
 ## Install
 
 Get a token at <https://chill.institute/auth/chilly-token> and treat it as a
-password; it stays valid until you sign out or replace it. Clients that send
-custom headers use `https://mcp.chill.institute` with that bearer:
+password. Signing out doesn't revoke it; removing chill.institute's access in
+your put.io settings does, within a day. Clients that send custom headers use
+`https://mcp.chill.institute` with that bearer:
 
 ```bash
 claude mcp add --transport http chill https://mcp.chill.institute --header "Authorization: Bearer <token>"
