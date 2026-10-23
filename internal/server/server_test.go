@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -293,6 +294,60 @@ func TestHTTPRequiresBearerAndForwardsIt(t *testing.T) {
 	_ = get.Body.Close()
 	if get.StatusCode != http.StatusMethodNotAllowed {
 		t.Fatalf("GET / status = %d, want 405", get.StatusCode)
+	}
+}
+
+func TestHTTPRejectsBatchesAndOversizedBodies(t *testing.T) {
+	t.Parallel()
+	engine := newFakeEngine(t)
+	web := httptest.NewServer(newTestServer(t, engine, HTTPTokenSource).Handler())
+	t.Cleanup(web.Close)
+
+	post := func(body string) (int, string) {
+		t.Helper()
+		request, _ := http.NewRequest(http.MethodPost, web.URL+MCPPath, strings.NewReader(body))
+		request.Header.Set("Authorization", "Bearer user-token")
+		request.Header.Set("Content-Type", "application/json")
+		request.Header.Set("Accept", "application/json, text/event-stream")
+		response, err := web.Client().Do(request)
+		if err != nil {
+			t.Fatalf("request error = %v", err)
+		}
+		defer func() { _ = response.Body.Close() }()
+		payload, _ := io.ReadAll(response.Body)
+		return response.StatusCode, string(payload)
+	}
+	call := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"whoami","arguments":{}}}`
+	calls := func() int {
+		engine.mu.Lock()
+		defer engine.mu.Unlock()
+		return len(engine.calls)
+	}
+
+	// Without MCP-Protocol-Version the SDK assumes 2025-03-26, which still
+	// allows batches; the handler must refuse them before any Engine call.
+	for _, body := range []string{"[" + call + "," + strings.Replace(call, `"id":1`, `"id":2`, 1) + "]", " \n\t[" + call + "]"} {
+		if status, payload := post(body); status != http.StatusBadRequest || !strings.Contains(payload, "batching is not supported") {
+			t.Fatalf("batch status = %d, body = %q", status, payload)
+		}
+	}
+	if got := calls(); got != 0 {
+		t.Fatalf("engine calls after batches = %d, want 0", got)
+	}
+
+	padded := strings.Replace(call, `"arguments":{}`, `"arguments":{},"pad":"`+strings.Repeat("x", MaxRequestBodyBytes)+`"`, 1)
+	if status, payload := post(padded); status != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized status = %d, body = %q", status, payload)
+	}
+	if got := calls(); got != 0 {
+		t.Fatalf("engine calls after oversized body = %d, want 0", got)
+	}
+
+	if status, payload := post(call); status != http.StatusOK || !strings.Contains(payload, `"id":1`) {
+		t.Fatalf("single call status = %d, body = %q", status, payload)
+	}
+	if got := engine.last(t); got.Auth != "Bearer user-token" || calls() != 1 {
+		t.Fatalf("single call reached engine %d times with %q", calls(), got.Auth)
 	}
 }
 
