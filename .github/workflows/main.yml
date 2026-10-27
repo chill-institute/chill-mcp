@@ -32,6 +32,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: mise run verify
+      - run: mise run security
       - run: mise run smoke
 
       - name: Scan pushed range

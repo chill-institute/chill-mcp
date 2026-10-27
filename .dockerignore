@@ -1,7 +1,6 @@
 .git
 .github
 chill-mcp
-coverage.out
 dist/
 .env.local
 .claude/
