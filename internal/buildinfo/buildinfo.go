@@ -7,8 +7,10 @@ import (
 )
 
 var (
-	version = "dev"
+	version = ""
 	commit  = "unknown"
+
+	readBuildInfo = debug.ReadBuildInfo
 )
 
 // Info is the current build identity.
@@ -19,7 +21,8 @@ type Info struct {
 
 // Current returns the linked build identity. Without ldflags it uses the
 // module version recorded by go install, so a released binary never reports
-// "dev" and never selects the dev chilly profile.
+// "dev" and never selects the dev chilly profile. Builds from a local checkout
+// still report "dev".
 func Current() Info {
 	v := fallback(version, "")
 	if v == "" {
@@ -29,9 +32,16 @@ func Current() Info {
 }
 
 func moduleVersion() string {
-	info, ok := debug.ReadBuildInfo()
+	info, ok := readBuildInfo()
 	if !ok || info.Main.Version == "" || info.Main.Version == "(devel)" {
 		return ""
+	}
+	for _, setting := range info.Settings {
+		// go build in a checkout stamps a VCS pseudo-version; go install
+		// module@version builds from the module cache without VCS settings.
+		if setting.Key == "vcs" {
+			return ""
+		}
 	}
 	return strings.TrimPrefix(info.Main.Version, "v")
 }
