@@ -1,6 +1,5 @@
 .DS_Store
 /chill-mcp
-coverage.out
 dist/
 .env.local
 

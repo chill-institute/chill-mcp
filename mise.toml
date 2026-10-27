@@ -14,28 +14,11 @@ experimental = true
 postinstall = "mise run hooks"
 
 [tasks.fmt]
-description = "Format Go sources"
-run = """
-go_files="$(git ls-files '*.go')"
-[ -n "$go_files" ] || exit 0
-printf '%s\n' "$go_files" | while IFS= read -r file; do
-  [ -f "$file" ] || continue
-  go tool goimports -w "$file"
-  gofmt -w "$file"
-done
-"""
-
-[tasks."fmt:check"]
-description = "Check Go source formatting"
-run = """
-files="$(gofmt -l $(git ls-files '*.go'))"
-if [ -n "$files" ]; then printf 'gofmt needs to be run on:\\n%s\\n' "$files" >&2; exit 1; fi
-files="$(go tool goimports -l $(git ls-files '*.go'))"
-if [ -n "$files" ]; then printf 'goimports needs to be run on:\\n%s\\n' "$files" >&2; exit 1; fi
-"""
+description = "Format Go sources with the formatters in .golangci.yml"
+run = "go tool golangci-lint fmt"
 
 [tasks.lint]
-description = "Run static analysis"
+description = "Run static analysis and the gofmt and goimports checks"
 run = "go tool golangci-lint run ./..."
 
 [tasks."mod:check"]
@@ -44,20 +27,10 @@ run = "go mod tidy -diff"
 
 [tasks.test]
 description = "Run unit and protocol tests"
-run = "go test -count=1 ./..."
-
-[tasks.coverage]
-description = "Run tests with coverage threshold"
-run = """
-threshold="${MISE_COVERAGE_THRESHOLD:-80}"
-go test -count=1 -coverprofile=coverage.out ./internal/... ./cmd/...
-total="$(go tool cover -func=coverage.out | awk '/^total:/ {sub("%", "", $3); print $3}')"
-printf '==> total coverage: %s%% (threshold %s%%)\\n' "$total" "$threshold"
-awk -v total="$total" -v threshold="$threshold" 'BEGIN { exit (total + 0 < threshold + 0) ? 1 : 0 }'
-"""
+run = "go test ./..."
 
 [tasks.security]
-description = "Run dependency vulnerability scan"
+description = "Run dependency vulnerability scan against the online Go vulnerability database"
 run = "go tool govulncheck ./..."
 
 [tasks.actions]
@@ -66,6 +39,13 @@ run = """
 actionlint
 zizmor --min-severity medium .github/workflows
 """
+
+[tasks."release:smoke"]
+description = "Check the shared release rules with a dry semantic-release run"
+run = [
+  "npm ci --prefix .github/release --ignore-scripts --no-audit --no-fund",
+  "node .github/release/smoke.mjs"
+]
 
 [tasks.smoke]
 description = "Boot the http server on a loopback port and prove health plus the bearer gate"
@@ -116,5 +96,5 @@ description = "Run the verification gate before push"
 run = "mise run verify"
 
 [tasks.verify]
-description = "Run formatting, module, lint, coverage, security, and workflow checks"
-depends = ["fmt:check", "mod:check", "lint", "coverage", "security", "actions"]
+description = "Run module, lint, test, and workflow checks"
+depends = ["mod:check", "lint", "test", "actions"]

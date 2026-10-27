@@ -58,5 +58,4 @@ and `CHILL_ENGINE_BASE_URL` sets the API base (`https://api.chill.institute`
 when unset). Verify a release image with
 `gh attestation verify oci://ghcr.io/chill-institute/chill-mcp:X.Y.Z --owner chill-institute`.
 
-[Architecture](./docs/architecture.md) · [Security](./SECURITY.md) ·
-[MIT License](./LICENSE)
+[Security](./SECURITY.md) · [MIT License](./LICENSE)
