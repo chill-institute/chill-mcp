@@ -8,5 +8,5 @@ mise run smoke
 ```
 
 When changing a tool, update its description and annotations, the protocol
-tests in `internal/server/server_test.go`, and the [tool table](./README.md#use).
+tests in `internal/server/server_test.go`.
 Add missing procedure names or validators to `chill-cli` first.

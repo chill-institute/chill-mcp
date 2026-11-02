@@ -28,34 +28,15 @@ go install github.com/chill-institute/chill-mcp/cmd/chill-mcp@latest
 
 ## Use
 
-| Tool | Does | Input |
-| --- | --- | --- |
-| `search_releases` | Search indexers with your saved filters | `query`, `indexer_id`? |
-| `list_movies` | Movie catalog for your source and sort | |
-| `list_tv_shows` | TV catalog for a provider | `source`? |
-| `get_tv_show` | One show and its seasons | `imdb_id` |
-| `get_tv_show_season` | Episodes of a season | `imdb_id`, `season` |
-| `find_episode_download` | Best release for an episode | `imdb_id`, `season`, `episode` |
-| `find_season_downloads` | Season pack and per-episode releases | `imdb_id`, `season` |
-| `list_indexers` | Your indexers and their health | |
-| `get_download_folder` | Where new transfers land | |
-| `browse_folder` | Contents of a put.io folder | `id` |
-| `get_transfer` | One put.io transfer | `id` |
-| `whoami` | Your account profile | |
-| `get_user_settings` | Search, catalog, and download settings | |
-| `list_user_setting_fields` | Fields `update_user_setting` accepts | |
-| `update_user_setting` | Change one setting | `field`, `value`, `dry_run`? |
-| `add_transfer` | Send a release to put.io | `url`, `movie_source`? or `tv_source`?, `dry_run`? |
-
-`?` marks optional input. Mutations are annotated so clients ask first, and
-`dry_run: true` returns the request unsent. Results are the API's JSON.
+Use your client's MCP tool discovery for the installed server's tools, input
+schemas, and descriptions. Definitions live in [internal/server](./internal/server/).
+Mutations are annotated so clients ask first; `dry_run: true` previews the
+request without sending it. Results are the API's JSON.
 
 ## Develop
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md). For `http`, `CHILL_LISTEN_HOST` and
-`CHILL_LISTEN_PORT` set the bind address ([defaults](./cmd/chill-mcp/main.go)),
-and `CHILL_ENGINE_BASE_URL` sets the API base (`https://api.chill.institute`
-when unset). Verify a release image with
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Configuration and defaults live in
+[cmd/chill-mcp/main.go](./cmd/chill-mcp/main.go). Verify a release image with
 `gh attestation verify oci://ghcr.io/chill-institute/chill-mcp:X.Y.Z --owner chill-institute`.
 
 [Security](./SECURITY.md) · [MIT License](./LICENSE)

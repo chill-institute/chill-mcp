@@ -26,8 +26,6 @@ mise run smoke
 - `add_transfer` and `update_user_setting` are the only mutations; keep their
   `dry_run` and annotations.
 - Tools live in `internal/server/`; transports and lifecycle in `cmd/chill-mcp/`.
-- `releaseRules` in [`.releaserc.json`](./.releaserc.json) match every
-  chill.institute package repo; `.github/release/smoke.mjs` fails on drift.
 
 ## Proof map
 
