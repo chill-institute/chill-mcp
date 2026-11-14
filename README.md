@@ -1,6 +1,6 @@
 # chill-mcp
 
-![chill.institute mcp](https://chill.institute/banner.png)
+![chill.institute mcp](https://raw.githubusercontent.com/chill-institute/.github/main/assets/banner.png)
 
 The [Model Context Protocol](https://modelcontextprotocol.io) server for
 [chill.institute](https://chill.institute): search indexers, browse catalogs,
